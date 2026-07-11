@@ -148,10 +148,47 @@
     }
   }
 
-  async function loadPlans() {
-    const res = await fetch(`${BACKEND_URL}/api/plans`);
-    plansCache = await res.json();
-    renderPlans(plansCache);
+  async function loadPlans(attempt = 1) {
+    const maxAttempts = 12; // ca. 60 Sekunden Gesamtwartezeit
+    if (attempt === 1) {
+      showLoadingState(tLoad("loading_server"));
+    }
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(`${BACKEND_URL}/api/plans`,
+        { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      plansCache = await res.json();
+      hideLoadingState();
+      renderPlans(plansCache);
+    } catch (err) {
+      if (attempt < maxAttempts) {
+        showLoadingState(tLoad("waking_server") + ` (${attempt}/${maxAttempts})`);
+        setTimeout(() => loadPlans(attempt + 1), 5000);
+      } else {
+        showLoadingState(tLoad("server_unreachable"), true);
+      }
+    }
+  }
+
+  function showLoadingState(msg, isError = false) {
+    const container = document.getElementById("plans");
+    container.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:${isError ? '#F87171' : 'var(--muted)'};padding:30px;">${msg}</div>`;
+  }
+
+  function hideLoadingState() {
+    // wird von renderPlans() ohnehin überschrieben
+  }
+
+  function tLoad(key) {
+    const dict = {
+      loading_server: lang === "de" ? "🔄 Lade Angebote..." : "🔄 Loading plans...",
+      waking_server: lang === "de" ? "⏳ Server wacht gerade auf, das kann beim ersten Mal etwas dauern..." : "⏳ Server is waking up, this can take a bit the first time...",
+      server_unreachable: lang === "de" ? "⚠ Server nicht erreichbar. Bitte Seite neu laden oder später erneut versuchen." : "⚠ Server unreachable. Please reload the page or try again later.",
+    };
+    return dict[key] || key;
   }
 
   function renderPlans(plans) {
