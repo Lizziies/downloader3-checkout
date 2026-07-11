@@ -169,7 +169,11 @@
         <div id="paypal-container-${key}"></div>
       `;
       container.appendChild(div);
-      renderPayPalButton(key);
+      try {
+        renderPayPalButton(key);
+      } catch (e) {
+        console.error("PayPal-Button konnte für " + key + " nicht geladen werden:", e);
+      }
     }
   }
 
@@ -213,15 +217,20 @@
   }
 
   let paypalLocale = null;
+  let sdkGeneration = 0;
 
   function loadPayPalSDK(locale, onReady) {
+    const myGen = ++sdkGeneration;
     const old = document.getElementById("paypal-sdk");
     if (old) old.remove();
-    try { delete window.paypal; } catch (e) { window.paypal = undefined; }
     const s = document.createElement("script");
     s.id = "paypal-sdk";
     s.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=EUR&locale=${locale}`;
-    s.onload = onReady;
+    s.onload = () => {
+      // Veraltete Antwort ignorieren, falls inzwischen erneut umgeschaltet wurde
+      if (myGen !== sdkGeneration) return;
+      onReady();
+    };
     document.head.appendChild(s);
   }
 </script>
