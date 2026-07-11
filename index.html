@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Downloader&lt;3 — Premium kaufen</title>
+<title>Downloader&lt;3 — Premium</title>
 <style>
   :root {
     --pink: #EC4899;
@@ -19,6 +19,12 @@
     display: flex; align-items: center; justify-content: center; padding: 24px;
   }
   .wrap { max-width: 880px; width: 100%; }
+  .lang-switch { text-align: center; margin-bottom: 10px; }
+  .lang-switch button {
+    background: transparent; border: 1px solid var(--muted); color: var(--muted);
+    border-radius: 999px; padding: 5px 14px; font-size: 12px; cursor: pointer; margin: 0 4px;
+  }
+  .lang-switch button.active { border-color: var(--pink); color: var(--pink); }
   .logo { text-align: center; font-size: 28px; font-weight: 800; color: var(--pink); margin-bottom: 6px; }
   .sub { text-align: center; color: var(--muted); margin-bottom: 36px; }
   .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
@@ -37,9 +43,6 @@
   .perks { list-style: none; padding: 0; margin: 16px 0 22px; text-align: left; color: #D1D5DB; font-size: 14px; }
   .perks li { padding: 4px 0; }
   .perks li::before { content: "✓ "; color: var(--pink); font-weight: 700; }
-  #paypal-container-30days, #paypal-container-365days, #paypal-container-forever {
-    min-height: 45px;
-  }
   .result {
     display: none; margin-top: 30px; background: var(--card); border-radius: 16px;
     padding: 28px; text-align: center;
@@ -57,47 +60,102 @@
 </head>
 <body>
 <div class="wrap">
+  <div class="lang-switch">
+    <button id="btn-de" onclick="setLang('de')">Deutsch</button>
+    <button id="btn-en" onclick="setLang('en')">English</button>
+  </div>
   <div class="logo">💜 Downloader&lt;3</div>
-  <div class="sub">Wähle dein Premium-Paket — Bezahlung sicher über PayPal</div>
+  <div class="sub" data-i18n="sub"></div>
 
   <div class="plans" id="plans"></div>
   <div class="error" id="error"></div>
 
   <div class="result" id="result">
-    <h3>🎉 Zahlung erfolgreich!</h3>
-    <p>Gib diesen Code in der App unter <b>Premium → Code einlösen</b> ein:</p>
+    <h3 data-i18n="success_title"></h3>
+    <p data-i18n="success_desc"></p>
     <div class="code-box" id="code-box"></div>
-    <p style="color:var(--muted); font-size:13px;">Tipp: Code anklicken markiert ihn automatisch zum Kopieren.</p>
+    <p style="color:var(--muted); font-size:13px;" data-i18n="copy_hint"></p>
   </div>
 
   <div class="footer">Created by developers Lisa &amp; Felix</div>
 </div>
 
 <script>
-  // ⚠️ Hier die URL deines gehosteten Backend-Servers eintragen (siehe README.md)
+  // ⚠️ Hier die URL deines gehosteten Backend-Servers eintragen
   const BACKEND_URL = "https://downloader3-backend.onrender.com";
   // ⚠️ Hier deine echte PayPal Client-ID eintragen (aus developer.paypal.com)
   const PAYPAL_CLIENT_ID = "AQl4lrJDm8_E7wfH7iNGp19q--LGH6QWIb7kJZJ1YeOzLDR3GTI_FoIY_xhDvo5278iqflYjqqn91OF6";
 
-  const PLAN_META = {
-    "30days":  { title: "30 Tage",  popular: false, perks: ["Alle Formate freigeschaltet", "1080p – 4K Auflösung", "KI-Modus & Web-Browser"] },
-    "365days": { title: "1 Jahr",   popular: true,  perks: ["Alles aus 30 Tage", "Bestes Preis-Leistungs-Verhältnis", "Ein Jahr sorgenfrei"] },
-    "forever": { title: "Für immer", popular: false, perks: ["Einmal zahlen, für immer nutzen", "Alle zukünftigen Updates", "Kein Ablaufdatum"] },
+  const I18N = {
+    de: {
+      sub: "Wähle dein Premium-Paket — Bezahlung sicher über PayPal",
+      success_title: "🎉 Zahlung erfolgreich!",
+      success_desc: "Gib diesen Code in der App unter <b>Premium → Code einlösen</b> ein:",
+      copy_hint: "Tipp: Code anklicken markiert ihn automatisch zum Kopieren.",
+      once: "einmalig",
+      error_prefix: "⚠ ",
+      payment_failed: "Zahlung fehlgeschlagen.",
+      paypal_problem: "Es gab ein Problem mit PayPal. Bitte erneut versuchen.",
+    },
+    en: {
+      sub: "Choose your Premium plan — securely paid via PayPal",
+      success_title: "🎉 Payment successful!",
+      success_desc: "Enter this code in the app under <b>Premium → Redeem code</b>:",
+      copy_hint: "Tip: clicking the code selects it for easy copying.",
+      once: "one-time",
+      error_prefix: "⚠ ",
+      payment_failed: "Payment failed.",
+      paypal_problem: "There was a problem with PayPal. Please try again.",
+    },
   };
+
+  const PLAN_META = {
+    de: {
+      "30days":  { title: "30 Tage",  popular: false, perks: ["Alle Formate freigeschaltet", "1080p – 4K Auflösung", "KI-Modus & Web-Browser"] },
+      "365days": { title: "1 Jahr",   popular: true,  perks: ["Alles aus 30 Tage", "Bestes Preis-Leistungs-Verhältnis", "Ein Jahr sorgenfrei"] },
+      "forever": { title: "Für immer", popular: false, perks: ["Einmal zahlen, für immer nutzen", "Alle zukünftigen Updates", "Kein Ablaufdatum"] },
+    },
+    en: {
+      "30days":  { title: "30 days",  popular: false, perks: ["All formats unlocked", "1080p – 4K resolution", "AI mode & web browser"] },
+      "365days": { title: "1 year",   popular: true,  perks: ["Everything from 30 days", "Best value for money", "A worry-free year"] },
+      "forever": { title: "Forever",  popular: false, perks: ["Pay once, use forever", "All future updates", "No expiration date"] },
+    },
+  };
+
+  let lang = localStorage.getItem("dl3_lang") || (navigator.language.startsWith("de") ? "de" : "en");
+  let plansCache = null;
+
+  function t(key) { return I18N[lang][key]; }
+
+  function setLang(newLang) {
+    lang = newLang;
+    localStorage.setItem("dl3_lang", lang);
+    document.documentElement.lang = lang;
+    document.getElementById("btn-de").classList.toggle("active", lang === "de");
+    document.getElementById("btn-en").classList.toggle("active", lang === "en");
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      el.innerHTML = t(el.getAttribute("data-i18n"));
+    });
+    if (plansCache) renderPlans(plansCache);
+  }
 
   async function loadPlans() {
     const res = await fetch(`${BACKEND_URL}/api/plans`);
-    const plans = await res.json();
-    const container = document.getElementById("plans");
+    plansCache = await res.json();
+    renderPlans(plansCache);
+  }
 
+  function renderPlans(plans) {
+    const container = document.getElementById("plans");
+    container.innerHTML = "";
     for (const [key, plan] of Object.entries(plans)) {
-      const meta = PLAN_META[key] || { title: key, popular: false, perks: [] };
+      const meta = (PLAN_META[lang] && PLAN_META[lang][key]) || { title: key, popular: false, perks: [] };
       const div = document.createElement("div");
       div.className = "plan" + (meta.popular ? " popular" : "");
       div.innerHTML = `
-        ${meta.popular ? '<div class="badge">Beliebt</div>' : ""}
+        ${meta.popular ? `<div class="badge">${lang === "de" ? "Beliebt" : "Popular"}</div>` : ""}
         <h3>${meta.title}</h3>
-        <div class="price">${plan.price} € <span>${key === "forever" ? "einmalig" : ""}</span></div>
+        <div class="price">${plan.price} € <span>${key === "forever" ? t("once") : ""}</span></div>
         <ul class="perks">${meta.perks.map(p => `<li>${p}</li>`).join("")}</ul>
         <div id="paypal-container-${key}"></div>
       `;
@@ -126,10 +184,10 @@
           body: JSON.stringify({ orderID: data.orderID, plan: planKey }),
         });
         const result = await res.json();
-        if (!result.ok) { showError(result.error || "Zahlung fehlgeschlagen."); return; }
+        if (!result.ok) { showError(result.error || t("payment_failed")); return; }
         showResult(result.code);
       },
-      onError: (err) => showError("Es gab ein Problem mit PayPal. Bitte erneut versuchen."),
+      onError: () => showError(t("paypal_problem")),
     }).render(`#paypal-container-${planKey}`);
   }
 
@@ -141,9 +199,11 @@
 
   function showError(msg) {
     const e = document.getElementById("error");
-    e.textContent = "⚠ " + msg;
+    e.textContent = t("error_prefix") + msg;
     e.classList.add("show");
   }
+
+  setLang(lang);
 
   const sdk = document.createElement("script");
   sdk.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=EUR`;
