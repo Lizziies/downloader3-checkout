@@ -136,7 +136,16 @@
     document.querySelectorAll("[data-i18n]").forEach(el => {
       el.innerHTML = t(el.getAttribute("data-i18n"));
     });
-    if (plansCache) renderPlans(plansCache);
+
+    const locale = lang === "de" ? "de_DE" : "en_US";
+    if (locale !== paypalLocale) {
+      paypalLocale = locale;
+      loadPayPalSDK(locale, () => {
+        if (plansCache) { renderPlans(plansCache); } else { loadPlans(); }
+      });
+    } else if (plansCache) {
+      renderPlans(plansCache);
+    }
   }
 
   async function loadPlans() {
@@ -203,12 +212,18 @@
     e.classList.add("show");
   }
 
-  setLang(lang);
+  let paypalLocale = null;
 
-  const sdk = document.createElement("script");
-  sdk.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=EUR`;
-  sdk.onload = loadPlans;
-  document.head.appendChild(sdk);
+  function loadPayPalSDK(locale, onReady) {
+    const old = document.getElementById("paypal-sdk");
+    if (old) old.remove();
+    try { delete window.paypal; } catch (e) { window.paypal = undefined; }
+    const s = document.createElement("script");
+    s.id = "paypal-sdk";
+    s.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=EUR&locale=${locale}`;
+    s.onload = onReady;
+    document.head.appendChild(s);
+  }
 </script>
 </body>
 </html>
