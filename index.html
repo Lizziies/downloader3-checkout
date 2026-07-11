@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Downloader&lt;3 — Premium kaufen</title>
+<style>
+  :root {
+    --pink: #EC4899;
+    --pink-dark: #B9226E;
+    --bg: #0E0F14;
+    --card: #1B1D26;
+    --muted: #9CA3AF;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+    background: var(--bg); color: #F3F4F6; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .wrap { max-width: 880px; width: 100%; }
+  .logo { text-align: center; font-size: 28px; font-weight: 800; color: var(--pink); margin-bottom: 6px; }
+  .sub { text-align: center; color: var(--muted); margin-bottom: 36px; }
+  .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+  .plan {
+    background: var(--card); border-radius: 16px; padding: 26px 22px;
+    border: 2px solid transparent; text-align: center; transition: border-color .15s;
+  }
+  .plan.popular { border-color: var(--pink); }
+  .badge {
+    display: inline-block; background: var(--pink); color: #fff; font-size: 11px;
+    font-weight: 700; padding: 3px 10px; border-radius: 999px; margin-bottom: 10px;
+  }
+  .plan h3 { margin: 4px 0 4px; font-size: 18px; }
+  .price { font-size: 32px; font-weight: 800; color: var(--pink); margin: 10px 0; }
+  .price span { font-size: 14px; color: var(--muted); font-weight: 400; }
+  .perks { list-style: none; padding: 0; margin: 16px 0 22px; text-align: left; color: #D1D5DB; font-size: 14px; }
+  .perks li { padding: 4px 0; }
+  .perks li::before { content: "✓ "; color: var(--pink); font-weight: 700; }
+  #paypal-container-30days, #paypal-container-365days, #paypal-container-forever {
+    min-height: 45px;
+  }
+  .result {
+    display: none; margin-top: 30px; background: var(--card); border-radius: 16px;
+    padding: 28px; text-align: center;
+  }
+  .result.show { display: block; }
+  .code-box {
+    font-size: 22px; font-weight: 800; letter-spacing: 2px; color: var(--pink);
+    background: #0E0F14; border: 2px dashed var(--pink); border-radius: 10px;
+    padding: 14px; margin: 16px 0; user-select: all;
+  }
+  .footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 36px; }
+  .error { color: #F87171; text-align: center; margin-top: 16px; display: none; }
+  .error.show { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">💜 Downloader&lt;3</div>
+  <div class="sub">Wähle dein Premium-Paket — Bezahlung sicher über PayPal</div>
+
+  <div class="plans" id="plans"></div>
+  <div class="error" id="error"></div>
+
+  <div class="result" id="result">
+    <h3>🎉 Zahlung erfolgreich!</h3>
+    <p>Gib diesen Code in der App unter <b>Premium → Code einlösen</b> ein:</p>
+    <div class="code-box" id="code-box"></div>
+    <p style="color:var(--muted); font-size:13px;">Tipp: Code anklicken markiert ihn automatisch zum Kopieren.</p>
+  </div>
+
+  <div class="footer">Created by developers Lisa &amp; Felix</div>
+</div>
+
+<script>
+  // ⚠️ Hier die URL deines gehosteten Backend-Servers eintragen (siehe README.md)
+  const BACKEND_URL = "https://downloader3-backend.onrender.com";
+  // ⚠️ Hier deine echte PayPal Client-ID eintragen (aus developer.paypal.com)
+  const PAYPAL_CLIENT_ID = "AQl4lrJDm8_E7wfH7iNGp19q--LGH6QWIb7kJZJ1YeOzLDR3GTI_FoIY_xhDvo5278iqflYjqqn91OF6";
+
+  const PLAN_META = {
+    "30days":  { title: "30 Tage",  popular: false, perks: ["Alle Formate freigeschaltet", "1080p – 4K Auflösung", "KI-Modus & Web-Browser"] },
+    "365days": { title: "1 Jahr",   popular: true,  perks: ["Alles aus 30 Tage", "Bestes Preis-Leistungs-Verhältnis", "Ein Jahr sorgenfrei"] },
+    "forever": { title: "Für immer", popular: false, perks: ["Einmal zahlen, für immer nutzen", "Alle zukünftigen Updates", "Kein Ablaufdatum"] },
+  };
+
+  async function loadPlans() {
+    const res = await fetch(`${BACKEND_URL}/api/plans`);
+    const plans = await res.json();
+    const container = document.getElementById("plans");
+
+    for (const [key, plan] of Object.entries(plans)) {
+      const meta = PLAN_META[key] || { title: key, popular: false, perks: [] };
+      const div = document.createElement("div");
+      div.className = "plan" + (meta.popular ? " popular" : "");
+      div.innerHTML = `
+        ${meta.popular ? '<div class="badge">Beliebt</div>' : ""}
+        <h3>${meta.title}</h3>
+        <div class="price">${plan.price} € <span>${key === "forever" ? "einmalig" : ""}</span></div>
+        <ul class="perks">${meta.perks.map(p => `<li>${p}</li>`).join("")}</ul>
+        <div id="paypal-container-${key}"></div>
+      `;
+      container.appendChild(div);
+      renderPayPalButton(key);
+    }
+  }
+
+  function renderPayPalButton(planKey) {
+    paypal.Buttons({
+      style: { color: "gold", shape: "pill", label: "paypal", height: 45 },
+      createOrder: async () => {
+        const res = await fetch(`${BACKEND_URL}/api/create-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan: planKey }),
+        });
+        const data = await res.json();
+        if (data.error) { showError(data.error); throw new Error(data.error); }
+        return data.id;
+      },
+      onApprove: async (data) => {
+        const res = await fetch(`${BACKEND_URL}/api/capture-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderID: data.orderID, plan: planKey }),
+        });
+        const result = await res.json();
+        if (!result.ok) { showError(result.error || "Zahlung fehlgeschlagen."); return; }
+        showResult(result.code);
+      },
+      onError: (err) => showError("Es gab ein Problem mit PayPal. Bitte erneut versuchen."),
+    }).render(`#paypal-container-${planKey}`);
+  }
+
+  function showResult(code) {
+    document.getElementById("code-box").textContent = code;
+    document.getElementById("result").classList.add("show");
+    document.getElementById("result").scrollIntoView({ behavior: "smooth" });
+  }
+
+  function showError(msg) {
+    const e = document.getElementById("error");
+    e.textContent = "⚠ " + msg;
+    e.classList.add("show");
+  }
+
+  const sdk = document.createElement("script");
+  sdk.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=EUR`;
+  sdk.onload = loadPlans;
+  document.head.appendChild(sdk);
+</script>
+</body>
+</html>
