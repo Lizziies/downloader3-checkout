@@ -9,7 +9,7 @@
 <script>
 (function () {
   try {
-    var raw = localStorage.getItem("dl3_checkout_accent");
+    var raw = localStorage.getItem("dl3_landing_accent");
     if (raw) {
       var c = JSON.parse(raw);
       var root = document.documentElement.style;
@@ -318,11 +318,13 @@
 
   const PLAN_META = {
     de: {
+      "free":    { title: "Gratis",   popular: false, perks: ["YouTube-Links als MP4", "480p & 720p Auflösung", "Favoriten & Verlauf", "Individuelles Design"] },
       "30days":  { title: "30 Tage",  popular: false, perks: ["Alle Formate freigeschaltet", "1080p – 4K Auflösung", "KI-Modus & Web-Browser"] },
       "365days": { title: "1 Jahr",   popular: true,  perks: ["Alles aus 30 Tage", "Bestes Preis-Leistungs-Verhältnis", "Ein Jahr sorgenfrei"] },
       "forever": { title: "Für immer", popular: false, perks: ["Einmal zahlen, für immer nutzen", "Alle zukünftigen Updates", "Kein Ablaufdatum"] },
     },
     en: {
+      "free":    { title: "Free",     popular: false, perks: ["YouTube links as MP4", "480p & 720p resolution", "Favorites & history", "Custom design"] },
       "30days":  { title: "30 days",  popular: false, perks: ["All formats unlocked", "1080p – 4K resolution", "AI mode & web browser"] },
       "365days": { title: "1 year",   popular: true,  perks: ["Everything from 30 days", "Best value for money", "A worry-free year"] },
       "forever": { title: "Forever",  popular: false, perks: ["Pay once, use forever", "All future updates", "No expiration date"] },
@@ -418,6 +420,30 @@
     container.innerHTML = "";
     renderedKeys = [];
     let firstPopularKey = null;
+
+    // 🆓 Gratis-Karte zuerst — kostet nichts, also ganz ohne Zahlung:
+    // einfach die App herunterladen und loslegen.
+    {
+      const meta = PLAN_META[lang]["free"];
+      const div = document.createElement("div");
+      div.className = "plan";
+      div.dataset.plan = "free";
+      div.innerHTML = `
+        <h3>${meta.title}</h3>
+        <div class="price">0 € <span>${lang === "de" ? "für immer" : "forever"}</span></div>
+        <ul class="perks">${meta.perks.map(p => `<li>${p}</li>`).join("")}</ul>
+        <a href="https://lizziies.github.io/downloader3-landing/#download"
+           style="display:inline-block; padding:11px 22px; border-radius:999px;
+                  border:1px solid var(--pink); color:var(--pink);
+                  text-decoration:none; font-weight:700; font-size:14px;">
+          ${lang === "de" ? "⬇ Einfach App laden — keine Zahlung nötig"
+                          : "⬇ Just get the app — no payment needed"}</a>
+      `;
+      div.addEventListener("click", () => selectPlan("free"));
+      container.appendChild(div);
+      renderedKeys.push("free");
+    }
+
     for (const [key, plan] of Object.entries(plans)) {
       const meta = (PLAN_META[lang] && PLAN_META[lang][key]) || { title: key, popular: false, perks: [] };
       if (meta.popular && !firstPopularKey) firstPopularKey = key;
@@ -444,9 +470,14 @@
         console.error("PayPal-Button konnte für " + key + " nicht geladen werden:", e);
       }
     }
-    // Das beliebteste Angebot (oder das erste) ist von Anfang an sichtbar
-    // ausgewählt, damit sofort klar ist, wie die Auswahl funktioniert.
-    selectPlan(firstPopularKey || renderedKeys[0]);
+    // 🔄 Plan-Vorauswahl-Sync: Was auf der Landingpage angeklickt wurde
+    // (?plan=... in der URL oder gemeinsamer Browser-Speicher), ist hier
+    // automatisch vorausgewählt. Sonst: das "Beliebt"-Angebot.
+    const urlPlan = new URLSearchParams(location.search).get("plan");
+    const storedPlan = localStorage.getItem("dl3_selected_plan");
+    const pre = [urlPlan, storedPlan, firstPopularKey, renderedKeys[0]]
+      .find(k => k && renderedKeys.includes(k));
+    selectPlan(pre);
     initReveal();
   }
 
@@ -456,6 +487,8 @@
       el.classList.toggle("selected", el.dataset.plan === key);
       el.style.transform = "";  // evtl. Tilt-Rest entfernen
     });
+    // Auswahl auch für die Landingpage merken (gemeinsamer Speicher)
+    localStorage.setItem("dl3_selected_plan", key);
   }
 
   function renderPayPalButton(planKey) {
@@ -576,7 +609,7 @@
     });
     document.getElementById("color-custom").value = hex;
     if (save) {
-      localStorage.setItem("dl3_checkout_accent", JSON.stringify({
+      localStorage.setItem("dl3_landing_accent", JSON.stringify({
         base: hex, dark: darken(hex, 0.28), glow: rgba(hex, 0.35), glow2: rgba(hex, 0.14),
       }));
     }
@@ -595,7 +628,7 @@
 
   (function syncSavedAccent() {
     try {
-      const raw = localStorage.getItem("dl3_checkout_accent");
+      const raw = localStorage.getItem("dl3_landing_accent");
       if (raw) {
         const c = JSON.parse(raw);
         document.querySelectorAll(".swatch").forEach(s => {
@@ -612,7 +645,7 @@
     applyAccent(e.target.value, true);
   });
   document.getElementById("color-reset").addEventListener("click", () => {
-    localStorage.removeItem("dl3_checkout_accent");
+    localStorage.removeItem("dl3_landing_accent");
     applyAccent("#EC4899", false);
   });
 
