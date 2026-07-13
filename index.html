@@ -253,7 +253,7 @@
   <div class="footer">
     Made by Lisa (Lizziie) &amp; Felix 💜<br>
     <span style="display:inline-block; margin-top:8px;">
-      <a href="https://lizziies.github.io/downloader3-landing/datenschutz.html" style="color:var(--muted);">Datenschutz</a>
+      <a id="ds-link" href="https://lizziies.github.io/downloader3-landing/datenschutz.html" style="color:var(--muted);" data-i18n="privacy_link">Datenschutz</a>
     </span>
   </div>
 </div>
@@ -293,6 +293,7 @@
       prepay_warning: "⚠ <b>Bevor du bezahlst:</b> Du brauchst die Downloader&lt;3-App bereits installiert und ein Konto mit GENAU DIESER E-Mail-Adresse registriert. Ohne passendes Konto kannst du den Code nach der Zahlung nicht einlösen und bekommst kein Premium. Zahlung passiert hier auf der Webseite — eingelöst wird der Code danach in der App.",
       color_title: "Akzentfarbe",
       color_reset: "Zurücksetzen",
+      privacy_link: "Datenschutz",
     },
     en: {
       sub: "Choose your Premium plan — securely paid via PayPal",
@@ -311,6 +312,7 @@
       prepay_warning: "⚠ <b>Before you pay:</b> You need the Downloader&lt;3 app already installed with an account registered using THIS EXACT email address. Without a matching account, you won't be able to redeem the code after payment and won't receive Premium. Payment happens here on the website — the code is redeemed afterward inside the app.",
       color_title: "Accent color",
       color_reset: "Reset",
+      privacy_link: "Privacy policy",
     },
   };
 
@@ -336,6 +338,17 @@
   function setLang(newLang) {
     lang = newLang;
     localStorage.setItem("dl3_lang", lang);
+    // 🌍 Auch den Sprach-Speicher der Landingpage mitschreiben, damit die
+    // Datenschutzseite (und die Landingpage) direkt in derselben Sprache
+    // öffnen, wenn man von hier aus rüberklickt.
+    localStorage.setItem("dl3_landing_lang", lang);
+    // Zusätzlich die Sprache direkt an den Datenschutz-Link anhängen —
+    // funktioniert dann sogar, wenn die Seiten mal auf verschiedenen
+    // Domains liegen sollten (localStorage ist pro Domain getrennt).
+    const dsLink = document.getElementById("ds-link");
+    if (dsLink) {
+      dsLink.href = "https://lizziies.github.io/downloader3-landing/datenschutz.html?lang=" + lang;
+    }
     document.documentElement.lang = lang;
     document.getElementById("btn-de").classList.toggle("active", lang === "de");
     document.getElementById("btn-en").classList.toggle("active", lang === "en");
